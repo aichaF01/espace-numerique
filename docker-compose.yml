@@ -1,0 +1,160 @@
+services:
+
+  # ════════════════════════════════════════
+  # INFRASTRUCTURE
+  # ════════════════════════════════════════
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: start-dev
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      CASSANDRA_CLUSTER_NAME: "espace-cluster"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  # ════════════════════════════════════════
+  # GATEWAY
+  # ════════════════════════════════════════
+
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    ports:
+      - "80:80"
+    depends_on:
+      - auth
+      - upload
+      - download
+      - admin
+      - ai
+      - frontend
+    restart: always
+
+  # ════════════════════════════════════════
+  # MICRO-SERVICES
+  # ════════════════════════════════════════
+
+  auth:
+    build: ./services/ms-auth
+    container_name: ms-auth
+    ports:
+      - "8005:8005"
+    env_file:
+      - ./services/ms-auth/.env
+    volumes:
+      - ./services/ms-auth:/app
+    depends_on:
+      - keycloak
+
+  upload:
+    build: ./services/ms-upload
+    container_name: ms-upload
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./services/ms-upload/.env
+    volumes:
+      - ./services/ms-upload:/app
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      auth:
+        condition: service_started
+
+  download:
+    build: ./services/ms-download
+    container_name: ms-download
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./services/ms-download/.env
+    volumes:
+      - ./services/ms-download:/app
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      auth:
+        condition: service_started
+
+  admin:
+    build: ./services/ms-admin
+    container_name: ms-admin
+    ports:
+      - "8003:8003"
+    env_file:
+      - ./services/ms-admin/.env
+    volumes:
+      - ./services/ms-admin:/app
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      auth:
+        condition: service_started
+      keycloak:
+        condition: service_started
+
+  ai:
+    build: ./services/ms-ai
+    container_name: ms-ai
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./services/ms-ai:/app
+      - ollama_data:/root/.ollama
+
+  # ════════════════════════════════════════
+  # FRONTEND
+  # ════════════════════════════════════════
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - auth
+
+volumes:
+  keycloak_data:
+  cassandra_data:
+  minio_data:
+  ollama_data:
