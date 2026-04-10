@@ -1,53 +1,16 @@
---- BASES DE DONNÉES ET VOLUMES DOCKER (OBLIGATOIRE) ---
-
-On ignore les dossiers de données locaux pour ne pas envoyer des Go sur GitHub
-
-/cassandra_data/
-/keycloak_data/
-/minio_data/
-**/data/
-**/db_data/
-
---- MICROSERVICES PYTHON (ms-auth, etc.) ---
-
-Caches Python
-
-**/pycache/
-*.py[cod]
-*$py.class
-
-Environnements virtuels
-
-.venv/
-venv/
-ENV/
-env/
-
---- FRONTEND REACT ---
-
-Dépendances (plusieurs milliers de fichiers inutiles sur Git)
-
-**/node_modules/
-
-Dossiers de compilation
-
-**/dist/
-**/build/
-.eslintcache
-
---- CONFIGURATIONS ET SECRETS ---
-
-On ne partage jamais les mots de passe réels sur GitHub
-
+# Variables d'environnement — jamais sur GitHub
 .env
-.env.local
-.env.*.local
+**/.env
 
-On autorise uniquement un fichier d'exemple si besoin
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
 
-!.env.example
+# Node
+node_modules/
+frontend/build/
 
---- LOGS ---
-
+# Docker
 *.log
-logs/
