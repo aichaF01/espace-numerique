@@ -94,11 +94,11 @@ cd espace-numerique
 cp .env.example .env
 
 # Chaque service
-cp services/auth/.env.example     services/auth/.env
-cp services/upload/.env.example   services/upload/.env
-cp services/download/.env.example services/download/.env
-cp services/admin/.env.example    services/admin/.env
-cp services/ai/.env.example       services/ai/.env
+cp services/ms-auth/.env.example     services/ms-auth/.env
+cp services/ms-upload/.env.example   services/ms-upload/.env
+cp services/ms-download/.env.example services/ms-download/.env
+cp services/ms-admin/.env.example    services/ms-admin/.env
+cp services/ms-ai/.env.example       services/ms-ai/.env
 cp frontend/.env.example          frontend/.env
 ```
 
@@ -232,7 +232,7 @@ Content-Type: application/json
 
 **Services nécessaires :**
 ```bash
-docker-compose up --build keycloak auth frontend
+docker-compose up --build keycloak auth frontend gateway
 ```
 
 **Ports utilisés :**

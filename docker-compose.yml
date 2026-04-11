@@ -5,7 +5,7 @@ services:
   # ════════════════════════════════════════
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+    image: keycloak/keycloak
     container_name: keycloak
     ports:
       - "8080:8080"
@@ -17,7 +17,7 @@ services:
       - keycloak_data:/opt/keycloak/data
 
   cassandra:
-    image: cassandra:4.1
+    image: cassandra
     container_name: cassandra
     ports:
       - "9042:9042"
@@ -32,7 +32,7 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio
     container_name: minio
     ports:
       - "9000:9000"
