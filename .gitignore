@@ -1,5 +1,6 @@
 # Variables d'environnement — jamais sur GitHub
 .env
+.env.production
 **/.env
 
 # Python

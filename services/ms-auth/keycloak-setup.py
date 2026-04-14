@@ -16,6 +16,7 @@ def wait_for_keycloak():
             pass
         print(f"  tentative {i+1}/30 ...")
         time.sleep(5)
+    print("Keycloak ne repond pas")
     sys.exit(1)
 
 def get_admin_token():
@@ -39,8 +40,10 @@ def headers(token):
 
 def create_realm(token):
     print(f"[1] Realm '{REALM}'...")
-    r = httpx.get(f"{KEYCLOAK_URL}/admin/realms/{REALM}",
-                  headers=headers(token))
+    r = httpx.get(
+        f"{KEYCLOAK_URL}/admin/realms/{REALM}",
+        headers=headers(token)
+    )
     if r.status_code == 200:
         print("    existe deja — skip")
         return
@@ -51,7 +54,10 @@ def create_realm(token):
             "realm":               REALM,
             "enabled":             True,
             "displayName":         "Espace Numerique EST Sale",
-            "accessTokenLifespan": 3600
+            "accessTokenLifespan": 3600,
+            # ── Important : désactiver les vérifications email ──
+            "registrationEmailAsUsername": False,
+            "verifyEmail":                 False,
         }
     ).raise_for_status()
     print("    cree")
@@ -89,16 +95,18 @@ def create_client(token):
             "clientId":                  CLIENT_ID,
             "enabled":                   True,
             "publicClient":              True,
-            "directAccessGrantsEnabled": True,
+            "directAccessGrantsEnabled": True,  # ← permet login username/password
             "standardFlowEnabled":       True,
-            "redirectUris":              ["http://localhost:3000/*"],
-            "webOrigins":                ["http://localhost:3000"]
+            "redirectUris":              ["http://localhost:3000/*", "http://localhost/*"],
+            "webOrigins":                ["http://localhost:3000", "http://localhost"]
         }
     ).raise_for_status()
     print("    cree")
 
 def create_user(token, username, email, password, role_name):
     h = headers(token)
+
+    # Vérifier si user existe
     r = httpx.get(
         f"{KEYCLOAK_URL}/admin/realms/{REALM}/users?username={username}",
         headers=h
@@ -106,27 +114,50 @@ def create_user(token, username, email, password, role_name):
     if r.json():
         print(f"    '{username}' existe — skip")
         return
+
+    # ── 1️⃣ Créer user (SANS password) ─────────────────
     r = httpx.post(
         f"{KEYCLOAK_URL}/admin/realms/{REALM}/users",
         headers=h,
         json={
-            "username":    username,
-            "email":       email,
-            "enabled":     True,
-            "credentials": [{"type": "password", "value": password, "temporary": False}]
+            "username": username,
+            "email": email,
+            "enabled": True,
+            "emailVerified": True,
+            # 👇 AJOUTS IMPORTANTS ICI 👇
+            "firstName": username.capitalize(), 
+            "lastName": "EST-Sale",            
+            "requiredActions": [] # Force Keycloak à n'exiger aucune action
         }
     )
     r.raise_for_status()
-    user_id   = r.headers["Location"].split("/")[-1]
+
+    # ── 2️⃣ récupérer user_id ─────────────────────────
+    user_id = r.headers["Location"].split("/")[-1]
+
+    # ── 3️⃣ 🔥 DEFINIR PASSWORD (TRÈS IMPORTANT ICI)
+    httpx.put(
+        f"{KEYCLOAK_URL}/admin/realms/{REALM}/users/{user_id}/reset-password",
+        headers=h,
+        json={
+            "type": "password",
+            "value": password,
+            "temporary": False
+        }
+    ).raise_for_status()
+
+    # ── 4️⃣ Assigner rôle ────────────────────────────
     role_data = httpx.get(
         f"{KEYCLOAK_URL}/admin/realms/{REALM}/roles/{role_name}",
         headers=h
     ).json()
+
     httpx.post(
         f"{KEYCLOAK_URL}/admin/realms/{REALM}/users/{user_id}/role-mappings/realm",
         headers=h,
         json=[role_data]
     ).raise_for_status()
+
     print(f"    '{username}' cree avec role '{role_name}'")
 
 def create_test_users(token):
@@ -147,3 +178,4 @@ if __name__ == "__main__":
     create_client(token)
     create_test_users(token)
     print("\nKeycloak configure avec succes !")
+    print("Users : etudiant1 / prof1 / admin1 — password: password123")
