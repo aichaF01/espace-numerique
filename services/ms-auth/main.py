@@ -74,10 +74,28 @@ def login(body: LoginRequest):
         },
         timeout=10
     )
+
+    # Afficher l'erreur Keycloak dans les logs pour diagnostic
+    if r.status_code != 200:
+        try:
+            err = r.json()
+            print(f"Keycloak error {r.status_code}: {err}")
+        except Exception:
+            print(f"Keycloak error {r.status_code}: {r.text}")
+
     if r.status_code == 401:
         raise HTTPException(status_code=401, detail="Identifiants incorrects")
+
+    if r.status_code == 400:
+        try:
+            detail = r.json().get("error_description", "Requete invalide")
+        except Exception:
+            detail = "Requete invalide"
+        raise HTTPException(status_code=400, detail=detail)
+
     r.raise_for_status()
     data = r.json()
+
     return {
         "access_token":  data["access_token"],
         "refresh_token": data["refresh_token"],
@@ -88,6 +106,7 @@ def login(body: LoginRequest):
 # ── Logout ───────────────────────────────────────────
 @app.post("/logout")
 def logout(refresh_token: str):
+    
     httpx.post(
         f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/logout",
         data={"refresh_token": refresh_token, "client_id": CLIENT_ID},

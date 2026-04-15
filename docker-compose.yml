@@ -1,3 +1,15 @@
+version: '3.8'
+
+# ════════════════════════════════════════
+# DÉFINITION DU RÉSEAU (AVEC SOUS-RÉSEAU IP)
+# ════════════════════════════════════════
+networks:
+  est_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
 services:
 
   # ════════════════════════════════════════
@@ -8,19 +20,21 @@ services:
     image: keycloak/keycloak
     container_name: keycloak
     ports:
-      - "8080:8080"
+      - "8080:8080" # Gardé ouvert pour accéder à l'interface d'admin
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
     command: start-dev
     volumes:
       - keycloak_data:/opt/keycloak/data
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.5
 
   cassandra:
     image: cassandra
     container_name: cassandra
-    ports:
-      - "9042:9042"
+    # ports: retirés car uniquement consulté par les MS en interne
     environment:
       CASSANDRA_CLUSTER_NAME: "espace-cluster"
     volumes:
@@ -30,19 +44,25 @@ services:
       interval: 30s
       timeout: 10s
       retries: 10
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.6
 
   minio:
     image: minio/minio
     container_name: minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9000" # Accès API S3 externe
+      - "9001:9001" # Accès Console admin
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: password123
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.7
 
   # ════════════════════════════════════════
   # GATEWAY
@@ -52,7 +72,7 @@ services:
     build: ./gateway
     container_name: gateway
     ports:
-      - "80:80"
+      - "80:80" # LE SEUL POINT D'ENTRÉE DE TON API !
     depends_on:
       - auth
       - upload
@@ -61,6 +81,9 @@ services:
       - ai
       - frontend
     restart: always
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.10
 
   # ════════════════════════════════════════
   # MICRO-SERVICES
@@ -69,20 +92,21 @@ services:
   auth:
     build: ./services/ms-auth
     container_name: ms-auth
-    ports:
-      - "8005:8005"
+    # ports: supprimés -> Accès uniquement via Nginx ou réseau interne
     env_file:
       - ./services/ms-auth/.env
     volumes:
       - ./services/ms-auth:/app
     depends_on:
       - keycloak
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.20
 
   upload:
     build: ./services/ms-upload
     container_name: ms-upload
-    ports:
-      - "8001:8001"
+    # ports: supprimés
     env_file:
       - ./services/ms-upload/.env
     volumes:
@@ -94,12 +118,14 @@ services:
         condition: service_started
       auth:
         condition: service_started
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.21
 
   download:
     build: ./services/ms-download
     container_name: ms-download
-    ports:
-      - "8002:8002"
+    # ports: supprimés
     env_file:
       - ./services/ms-download/.env
     volumes:
@@ -111,12 +137,14 @@ services:
         condition: service_started
       auth:
         condition: service_started
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.22
 
   admin:
     build: ./services/ms-admin
     container_name: ms-admin
-    ports:
-      - "8003:8003"
+    # ports: supprimés
     env_file:
       - ./services/ms-admin/.env
     volumes:
@@ -128,15 +156,20 @@ services:
         condition: service_started
       keycloak:
         condition: service_started
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.23
 
   ai:
     build: ./services/ms-ai
     container_name: ms-ai
-    ports:
-      - "8004:8004"
+    # ports: supprimés
     volumes:
       - ./services/ms-ai:/app
       - ollama_data:/root/.ollama
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.24
 
   # ════════════════════════════════════════
   # FRONTEND
@@ -152,6 +185,9 @@ services:
       - /app/node_modules
     depends_on:
       - auth
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.30
 
 volumes:
   keycloak_data:
