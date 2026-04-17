@@ -64,6 +64,19 @@ services:
       est_network:
         ipv4_address: 172.25.0.7
 
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434" # Accès API Ollama externe
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      est_network:
+        ipv4_address: 172.25.0.8
+
   # ════════════════════════════════════════
   # GATEWAY
   # ════════════════════════════════════════
