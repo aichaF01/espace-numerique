@@ -5,108 +5,23 @@ import { listCours, uploadCours } from '../api/cours';
 import { createUser, listUsers, deleteUser } from '../api/admin';
 import { askAI } from '../api/ai';
 
+// ---------------icons------------------
+import Icon from '../components/ui/icon';
+import { ICONS } from '../components/ui/icons';
+
+// -------------styles--------------------
+import {s} from "../styles/dashboard"
+import { styles } from '../styles/login';
+import Sidebar from '../components/layout/Sidebar';
+import Navbar from '../components/layout/Navbar';
+
 // ─── icônes SVG inline ───────────────────────────────────────────────────────
-const Icon = ({ d, size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d={d} />
-  </svg>
-);
-
-const ICONS = {
-  cours:    'M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 014 17V4a2 2 0 012-2h12a2 2 0 012 2v13M4 19.5V21',
-  upload:   'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12',
-  users:    'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
-  ai:       'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',
-  download: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3',
-  file:     'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6',
-  logout:   'M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9',
-  send:     'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
-  logo:     'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
-  trash:    'M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6',
-  plus:     'M12 5v14M5 12h14',
-};
-
-// ─── styles ──────────────────────────────────────────────────────────────────
-const s = {
-  // layout
-  app:      { display:'flex', flexDirection:'column', minHeight:'100vh', backgroundColor:'#f7f6f3', fontFamily:"'DM Sans', system-ui, sans-serif" },
-  navbar:   { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 28px', height:'56px', backgroundColor:'#fff', borderBottom:'0.5px solid rgba(0,0,0,0.08)', position:'sticky', top:0, zIndex:10 },
-  brand:    { display:'flex', alignItems:'center', gap:'10px' },
-  logoBox:  { width:'32px', height:'32px', borderRadius:'9px', backgroundColor:'#0F6E56', display:'flex', alignItems:'center', justifyContent:'center', color:'white' },
-  brandTxt: { fontSize:'14px', fontWeight:'600', color:'#1a1a1a', letterSpacing:'-0.01em' },
-  navRight: { display:'flex', alignItems:'center', gap:'12px' },
-  body:     { display:'flex', flex:1 },
-
-  // sidebar
-  sidebar:  { width:'220px', backgroundColor:'#fff', borderRight:'0.5px solid rgba(0,0,0,0.07)', padding:'20px 12px', display:'flex', flexDirection:'column', gap:'4px' },
-  sideItem: { display:'flex', alignItems:'center', gap:'10px', padding:'9px 10px', borderRadius:'8px', fontSize:'13px', color:'#555', cursor:'pointer', transition:'all .15s', border:'none', background:'transparent', width:'100%', textAlign:'left' },
-  sideActive:{ backgroundColor:'#0F6E56', color:'white' },
-
-  // content
-  content:  { flex:1, padding:'28px 32px', display:'flex', flexDirection:'column', gap:'24px', overflowY:'auto' },
-  pageHead: { display:'flex', alignItems:'flex-start', justifyContent:'space-between' },
-  pageTitle:{ fontSize:'20px', fontWeight:'600', color:'#1a1a1a', letterSpacing:'-0.02em', margin:0 },
-  pageSub:  { fontSize:'13px', color:'#888', marginTop:'3px' },
-
-  // stats
-  statsRow: { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'14px' },
-  statCard: { backgroundColor:'#fff', border:'0.5px solid rgba(0,0,0,0.08)', borderRadius:'12px', padding:'16px 18px' },
-  statLbl:  { fontSize:'11px', color:'#999', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'.05em' },
-  statVal:  { fontSize:'26px', fontWeight:'600', color:'#1a1a1a', letterSpacing:'-0.03em' },
-  statHint: { fontSize:'11px', color:'#bbb', marginTop:'4px' },
-
-  // cards
-  card:     { backgroundColor:'#fff', border:'0.5px solid rgba(0,0,0,0.08)', borderRadius:'12px', padding:'20px 22px' },
-  secTitle: { fontSize:'13px', fontWeight:'600', color:'#1a1a1a', marginBottom:'14px', letterSpacing:'-0.01em' },
-
-  // cours list
-  coursList:{ display:'flex', flexDirection:'column', gap:'8px' },
-  coursRow: { display:'flex', alignItems:'center', gap:'14px', padding:'12px 14px', backgroundColor:'#fafaf9', borderRadius:'10px', border:'0.5px solid rgba(0,0,0,0.06)' },
-  coursIcon:{ width:'36px', height:'36px', borderRadius:'8px', backgroundColor:'#E1F5EE', display:'flex', alignItems:'center', justifyContent:'center', color:'#0F6E56', flexShrink:0 },
-  coursInfo:{ flex:1 },
-  coursTit: { fontSize:'13px', fontWeight:'500', color:'#1a1a1a' },
-  coursMeta:{ fontSize:'11px', color:'#aaa', marginTop:'2px' },
-
-  // form
-  formGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' },
-  formGrp:  { display:'flex', flexDirection:'column', gap:'5px' },
-  formLbl:  { fontSize:'12px', fontWeight:'500', color:'#666' },
-  formInp:  { padding:'9px 11px', borderRadius:'8px', border:'0.5px solid rgba(0,0,0,0.12)', backgroundColor:'#fafaf9', fontSize:'13px', color:'#1a1a1a', outline:'none', width:'100%', boxSizing:'border-box' },
-  dropZone: { border:'1.5px dashed rgba(0,0,0,0.15)', borderRadius:'10px', padding:'32px', textAlign:'center', backgroundColor:'#fafaf9', cursor:'pointer' },
-  dropTxt:  { fontSize:'13px', color:'#888' },
-  dropHint: { fontSize:'11px', color:'#bbb', marginTop:'4px' },
-
-  // table
-  tableWrap:{ backgroundColor:'#fff', border:'0.5px solid rgba(0,0,0,0.08)', borderRadius:'12px', overflow:'hidden' },
-  tableHead:{ display:'grid', gridTemplateColumns:'1.5fr 2fr 1fr 80px', gap:'12px', padding:'10px 16px', backgroundColor:'#f7f6f3', fontSize:'11px', fontWeight:'600', color:'#999', textTransform:'uppercase', letterSpacing:'.05em' },
-  tableRow: { display:'grid', gridTemplateColumns:'1.5fr 2fr 1fr 80px', gap:'12px', padding:'12px 16px', borderTop:'0.5px solid rgba(0,0,0,0.06)', fontSize:'13px', color:'#1a1a1a', alignItems:'center' },
-
-  // badges
-  badgeEtu: { display:'inline-block', padding:'2px 9px', borderRadius:'20px', fontSize:'11px', fontWeight:'500', backgroundColor:'#E1F5EE', color:'#085041' },
-  badgeProf:{ display:'inline-block', padding:'2px 9px', borderRadius:'20px', fontSize:'11px', fontWeight:'500', backgroundColor:'#E6F1FB', color:'#0C447C' },
-  badgeAdm: { display:'inline-block', padding:'2px 9px', borderRadius:'20px', fontSize:'11px', fontWeight:'500', backgroundColor:'#FAEEDA', color:'#633806' },
-
-  // buttons
-  btnPrimary:{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 16px', borderRadius:'8px', backgroundColor:'#0F6E56', border:'none', color:'white', fontSize:'13px', fontWeight:'500', cursor:'pointer' },
-  btnOutline:{ padding:'5px 12px', borderRadius:'6px', border:'0.5px solid #0F6E56', backgroundColor:'transparent', color:'#0F6E56', fontSize:'12px', cursor:'pointer', fontWeight:'500' },
-  btnDanger: { padding:'5px 10px', borderRadius:'6px', border:'0.5px solid #F09595', backgroundColor:'transparent', color:'#A32D2D', fontSize:'12px', cursor:'pointer' },
-  btnLogout: { display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', borderRadius:'7px', border:'0.5px solid rgba(0,0,0,0.12)', backgroundColor:'transparent', color:'#666', fontSize:'12px', cursor:'pointer' },
-  avatar:   { width:'30px', height:'30px', borderRadius:'50%', backgroundColor:'#f0ede8', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', color:'#555', border:'0.5px solid rgba(0,0,0,0.1)' },
-
-  // chat
-  chatHead: { backgroundColor:'#0F6E56', padding:'16px 18px', display:'flex', alignItems:'center', gap:'10px' },
-  chatDot:  { width:'8px', height:'8px', borderRadius:'50%', backgroundColor:'rgba(255,255,255,0.5)' },
-  chatMsgs: { padding:'16px', display:'flex', flexDirection:'column', gap:'10px', backgroundColor:'#f7f6f3', minHeight:'220px', maxHeight:'320px', overflowY:'auto' },
-  msgUser:  { alignSelf:'flex-end', maxWidth:'75%', padding:'9px 13px', borderRadius:'12px', borderBottomRightRadius:'3px', backgroundColor:'#0F6E56', color:'white', fontSize:'13px', lineHeight:1.5 },
-  msgAI:    { alignSelf:'flex-start', maxWidth:'75%', padding:'9px 13px', borderRadius:'12px', borderBottomLeftRadius:'3px', backgroundColor:'#fff', color:'#1a1a1a', fontSize:'13px', lineHeight:1.5, border:'0.5px solid rgba(0,0,0,0.08)' },
-  chatBar:  { display:'flex', gap:'8px', padding:'12px 16px', borderTop:'0.5px solid rgba(0,0,0,0.08)', backgroundColor:'#fff' },
-  chatInp:  { flex:1, padding:'8px 11px', borderRadius:'8px', border:'0.5px solid rgba(0,0,0,0.12)', backgroundColor:'#fafaf9', fontSize:'13px', color:'#1a1a1a', outline:'none' },
-  chatSend: { padding:'8px 14px', borderRadius:'8px', backgroundColor:'#0F6E56', border:'none', color:'white', fontSize:'13px', cursor:'pointer', display:'flex', alignItems:'center', gap:'6px' },
-
-  // upload feedback
-  uploadedFile:{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 12px', backgroundColor:'#E1F5EE', borderRadius:'8px', fontSize:'12px', color:'#085041', marginTop:'8px' },
-};
+// const Icon = ({ d, size = 16 }) => (
+//   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+//     stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+//     <path d={d} />
+//   </svg>
+// );
 
 // ─── role badge helper ────────────────────────────────────────────────────────
 function RoleBadge({ role }) {
@@ -142,12 +57,12 @@ function EtudiantCours() {
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState('');
 
-  useEffect(() => {
-    listCours()
-      .then(setCours)
-      .catch(() => setError('Impossible de charger les cours.'))
-      .finally(() => setLoading(false));
-  }, []);
+  // useEffect(() => {
+  //   listCours()
+  //     .then(setCours)
+  //     .catch(() => setError('Impossible de charger les cours.'))
+  //     .finally(() => setLoading(false));
+  // }, []);
 
   if (loading) return <p style={{ color:'#999', fontSize:'13px' }}>Chargement des cours...</p>;
   if (error)   return <p style={{ color:'#A32D2D', fontSize:'13px' }}>{error}</p>;
@@ -263,9 +178,9 @@ function ProfCours() {
   const [cours, setCours]   = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    listCours().then(setCours).finally(() => setLoading(false));
-  }, []);
+  // useEffect(() => {
+  //   listCours().then(setCours).finally(() => setLoading(false));
+  // }, []);
 
   if (loading) return <p style={{ color:'#999', fontSize:'13px' }}>Chargement...</p>;
 
@@ -294,19 +209,26 @@ function ProfCours() {
 
 // ─── vue : gestion utilisateurs (admin) ──────────────────────────────────────
 function AdminUsers() {
-  const [users, setUsers]   = useState([]);
+  const [users, setUsers]   = useState([
+    { username: "admin1", email: "admin@est.ma", role: "admin" },
+    { username: "prof1", email: "prof@est.ma", role: "prof" },
+    { username: "etudiant1", email: "etudiant@est.ma", role: "etudiant" }
+  ]);
   const [loading, setLoading] = useState(true);
   const [form, setForm]     = useState({ username:'', email:'', password:'', role:'etudiant' });
   const [msg, setMsg]       = useState('');
   const [error, setError]   = useState('');
   const [creating, setCreating] = useState(false);
 
+  //------------eyeIcon----------------
+  const [show, setShow] = useState(false);
+
   const fetchUsers = () => {
     setLoading(true);
     listUsers().then(setUsers).finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  // useEffect(() => { fetchUsers(); }, []);
 
   const handleCreate = async () => {
     if (!form.username || !form.email || !form.password) {
@@ -357,11 +279,21 @@ function AdminUsers() {
               onChange={e => setForm({...form, email: e.target.value})}
               placeholder="test@est.ma" />
           </div>
-          <div style={s.formGrp}>
+          <div style={{...s.formGrp,position:"relative"}}>
             <label style={s.formLbl}>Mot de passe *</label>
-            <input style={s.formInp} type="password" value={form.password}
+            <input style={s.formInp} type={show ? "text" : "password"} value={form.password}
               onChange={e => setForm({...form, password: e.target.value})}
               placeholder="••••••••" />
+              {/* Eye Button */}
+                {form.password && (
+                <button
+                  onClick={() => setShow(!show)}
+                  type="button"
+                  style={styles.eyeIcon}
+                >
+                  <Icon d={show ? ICONS.eyeOff : ICONS.eye} size={20}/>
+                </button>
+                )}
           </div>
           <div style={s.formGrp}>
             <label style={s.formLbl}>Rôle</label>
@@ -498,7 +430,7 @@ export default function DashboardPage() {
     <div style={s.app}>
 
       {/* ── NAVBAR ── */}
-      <nav style={s.navbar}>
+      {/* <nav style={s.navbar}>
         <div style={s.brand}>
           <div style={s.logoBox}>
             <Icon d={ICONS.logo} size={16} />
@@ -513,23 +445,18 @@ export default function DashboardPage() {
             Déconnexion
           </button>
         </div>
-      </nav>
+      </nav> */}
+
+      <Navbar/>
 
       <div style={s.body}>
 
         {/* ── SIDEBAR ── */}
-        <aside style={s.sidebar}>
-          {items.map((item) => (
-            <button
-              key={item.key}
-              style={{ ...s.sideItem, ...(activeView === item.key ? s.sideActive : {}) }}
-              onClick={() => setActiveView(item.key)}
-            >
-              <Icon d={item.icon} size={15} />
-              {item.label}
-            </button>
-          ))}
-        </aside>
+        <Sidebar 
+          items={items}
+          activeView={activeView}
+          onSelect={setActiveView}
+        />
 
         {/* ── CONTENU ── */}
         <main style={s.content}>

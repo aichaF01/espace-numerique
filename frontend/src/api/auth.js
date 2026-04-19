@@ -15,7 +15,7 @@ export const login = async (username, password) => {
  * Refresh token
  */
 export const refreshToken = async (refresh_token) => {
-  const res = await axiosClient.post("/refresh", null, {
+  const res = await axiosClient.post("/api/auth/refresh", null, {
     params: { refresh_token },
   });
   return res.data;
@@ -25,7 +25,7 @@ export const refreshToken = async (refresh_token) => {
  * Logout
  */
 export const logout = async (refresh_token) => {
-  await axiosClient.post("/logout", null, {
+  await axiosClient.post("/api/auth/logout", null, {
     params: { refresh_token },
   });
 };

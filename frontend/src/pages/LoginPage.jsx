@@ -3,11 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login } from '../api/auth';
 
+// ---------------styles------------------
+import { styles } from '../styles/login';
+
+//--------------------icons---------------
+import { ICONS } from '../components/ui/icons';
+import Icon from '../components/ui/icon';
+
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+  const [show, setShow] = useState(false);
 
   const { saveToken } = useAuth();
   const navigate = useNavigate();
@@ -22,7 +30,7 @@ export default function LoginPage() {
     try {
       const data = await login(username, password);
       saveToken(data.access_token);
-      navigate('/');
+      navigate('/dash');
     } catch {
       setError('Identifiants incorrects. Réessayez.');
     } finally {
@@ -61,16 +69,26 @@ export default function LoginPage() {
         </div>
 
         {/* Champ password */}
-        <div style={styles.field}>
+        <div style={{...styles.field, position: "relative"}}>
           <label style={styles.label}>Mot de passe</label>
           <input
             style={styles.input}
-            type="password"
+            type={show ? "text" : "password"}
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
           />
+          {/* Eye Button */}
+          {password && (
+          <button
+            onClick={() => setShow(!show)}
+            type="button"
+            style={styles.eyeIcon}
+          >
+            <Icon d={show ? ICONS.eyeOff : ICONS.eye} size={20}/>
+          </button>
+          )}
         </div>
 
         {/* Message d'erreur */}
@@ -90,91 +108,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f5f5f3',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    border: '0.5px solid rgba(0,0,0,0.1)',
-    borderRadius: '16px',
-    padding: '36px',
-    width: '80%',
-    maxWidth: '500px',
-  },
-  logo: {
-    width: '44px',
-    height: '44px',
-    borderRadius: '12px',
-    backgroundColor: '#0F6E56',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '20px',
-  },
-  title: {
-    fontSize: '20px',
-    fontWeight: '500',
-    color: '#1a1a1a',
-    margin: '0 0 4px 0',
-  },
-  subtitle: {
-    fontSize: '13px',
-    color: '#888',
-    margin: '0 0 28px 0',
-  },
-  field: {
-    marginBottom: '14px',
-  },
-  label: {
-    display: 'block',
-    fontSize: '12px',
-    fontWeight: '500',
-    color: '#555',
-    marginBottom: '5px',
-  },
-  input: {
-    width: '100%',
-    padding: '9px 12px',
-    borderRadius: '8px',
-    border: '0.5px solid rgba(0,0,0,0.15)',
-    backgroundColor: '#fafafa',
-    fontSize: '14px',
-    color: '#1a1a1a',
-    boxSizing: 'border-box',
-    outline: 'none',
-  },
-  error: {
-    fontSize: '13px',
-    color: '#A32D2D',
-    backgroundColor: '#FCEBEB',
-    border: '0.5px solid #F09595',
-    borderRadius: '8px',
-    padding: '8px 12px',
-    marginBottom: '12px',
-  },
-  btn: {
-    width: '100%',
-    padding: '10px',
-    borderRadius: '8px',
-    backgroundColor: '#0F6E56',
-    border: 'none',
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    marginTop: '4px',
-  },
-  footer: {
-    fontSize: '11px',
-    color: '#aaa',
-    textAlign: 'center',
-    marginTop: '20px',
-    marginBottom: 0,
-  },
-};
