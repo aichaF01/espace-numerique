@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from app.models import ChatRequest, ChatResponse
-from app.ollma_service import generate_response, get_models
+from models import ChatRequest, ChatResponse
+from ollma_service import generate_response, get_models
 
 router = APIRouter()
 
