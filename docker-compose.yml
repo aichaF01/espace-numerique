@@ -1,8 +1,5 @@
 version: '3.8'
 
-# ════════════════════════════════════════
-# DÉFINITION DU RÉSEAU (AVEC SOUS-RÉSEAU IP)
-# ════════════════════════════════════════
 networks:
   est_network:
     driver: bridge
@@ -12,15 +9,12 @@ networks:
 
 services:
 
-  # ════════════════════════════════════════
-  # INFRASTRUCTURE
-  # ════════════════════════════════════════
-
+  # ========= INFRA =========
   keycloak:
     image: keycloak/keycloak
     container_name: keycloak
     ports:
-      - "8080:8080" # Gardé ouvert pour accéder à l'interface d'admin
+      - "8080:8080"
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -34,7 +28,6 @@ services:
   cassandra:
     image: cassandra
     container_name: cassandra
-    # ports: retirés car uniquement consulté par les MS en interne
     environment:
       CASSANDRA_CLUSTER_NAME: "espace-cluster"
     volumes:
@@ -52,8 +45,8 @@ services:
     image: minio/minio
     container_name: minio
     ports:
-      - "9000:9000" # Accès API S3 externe
-      - "9001:9001" # Accès Console admin
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: password123
@@ -64,15 +57,12 @@ services:
       est_network:
         ipv4_address: 172.25.0.7
 
-  # ════════════════════════════════════════
-  # GATEWAY
-  # ════════════════════════════════════════
-
+  # ========= GATEWAY =========
   gateway:
     build: ./gateway
     container_name: gateway
     ports:
-      - "80:80" # LE SEUL POINT D'ENTRÉE DE TON API !
+      - "80:80"
     depends_on:
       - auth
       - upload
@@ -85,14 +75,11 @@ services:
       est_network:
         ipv4_address: 172.25.0.10
 
-  # ════════════════════════════════════════
-  # MICRO-SERVICES
-  # ════════════════════════════════════════
+  # ========= MICROSERVICES =========
 
   auth:
     build: ./services/ms-auth
     container_name: ms-auth
-    # ports: supprimés -> Accès uniquement via Nginx ou réseau interne
     env_file:
       - ./services/ms-auth/.env
     volumes:
@@ -106,7 +93,8 @@ services:
   upload:
     build: ./services/ms-upload
     container_name: ms-upload
-    # ports: supprimés
+    ports:
+      - "8000:8000"
     env_file:
       - ./services/ms-upload/.env
     volumes:
@@ -125,7 +113,6 @@ services:
   download:
     build: ./services/ms-download
     container_name: ms-download
-    # ports: supprimés
     env_file:
       - ./services/ms-download/.env
     volumes:
@@ -144,7 +131,6 @@ services:
   admin:
     build: ./services/ms-admin
     container_name: ms-admin
-    # ports: supprimés
     env_file:
       - ./services/ms-admin/.env
     volumes:
@@ -163,7 +149,6 @@ services:
   ai:
     build: ./services/ms-ai
     container_name: ms-ai
-    # ports: supprimés
     volumes:
       - ./services/ms-ai:/app
       - ollama_data:/root/.ollama
@@ -171,9 +156,7 @@ services:
       est_network:
         ipv4_address: 172.25.0.24
 
-  # ════════════════════════════════════════
-  # FRONTEND
-  # ════════════════════════════════════════
+  # ========= FRONTEND =========
 
   frontend:
     build: ./frontend
