@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react';
-import { getRoleFromToken } from '../utils/jwt';
+import { getRoleFromToken ,getUsernameFromToken} from '../utils/jwt';
 
 const AuthContext = createContext();
 
@@ -7,6 +7,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
 
   const role = token ? getRoleFromToken(token) : null;
+  const username = token ? getUsernameFromToken(token) : null;
+
 
   const saveToken = (newToken) => {
     localStorage.setItem('token', newToken);
@@ -19,7 +21,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, role, saveToken, logout }}>
+    <AuthContext.Provider value={{ token, role, username, saveToken, logout }}>
       {children}
     </AuthContext.Provider>
   );

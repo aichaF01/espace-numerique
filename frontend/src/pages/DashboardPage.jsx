@@ -14,6 +14,7 @@ import {s} from "../styles/dashboard"
 import { styles } from '../styles/login';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
+import ChatbotView from '../features/chatbot/ChatbotView';
 
 // ─── icônes SVG inline ───────────────────────────────────────────────────────
 // const Icon = ({ d, size = 16 }) => (
@@ -53,8 +54,25 @@ const sidebarItems = {
 
 // ─── vue : liste des cours (étudiant) ────────────────────────────────────────
 function EtudiantCours() {
-  const [cours, setCours]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cours, setCours]   = useState([
+      {
+      id: 1,
+      titre: "Docker pour débutants",
+      description: "Introduction aux conteneurs",
+    },
+    {
+      id: 2,
+      titre: "React avancé",
+      description: "Hooks et optimisation",
+    },
+    {
+      id: 3,
+      titre: "DevOps",
+      description: "CI/CD et GitHub Actions",
+    },
+  ]);
+  // make it true when you test the api
+  const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
 
   // useEffect(() => {
@@ -214,7 +232,8 @@ function AdminUsers() {
     { username: "prof1", email: "prof@est.ma", role: "prof" },
     { username: "etudiant1", email: "etudiant@est.ma", role: "etudiant" }
   ]);
-  const [loading, setLoading] = useState(true);
+  // make it true when you test the api
+  const [loading, setLoading] = useState(false);
   const [form, setForm]     = useState({ username:'', email:'', password:'', role:'etudiant' });
   const [msg, setMsg]       = useState('');
   const [error, setError]   = useState('');
@@ -236,22 +255,45 @@ function AdminUsers() {
     }
     setCreating(true); setError(''); setMsg('');
     try {
-      await createUser(form);
+      // await createUser(form);
+      // setMsg(`Compte "${form.username}" créé avec succès.`);
+      // setForm({ username:'', email:'', password:'', role:'etudiant' });
+      // fetchUsers();
+
+      //in local : for test
+      const exists = users.find(u => u.email === form.email);
+
+      if (exists) {
+        throw new Error("exists");
+      }
+
+      const newUser = {
+        id: Date.now(),
+        ...form,
+      };
+
+      setUsers(prev => [...prev, newUser]);
+
       setMsg(`Compte "${form.username}" créé avec succès.`);
       setForm({ username:'', email:'', password:'', role:'etudiant' });
-      fetchUsers();
     } catch {
       setError('Erreur lors de la création. Cet utilisateur existe peut-être déjà.');
     } finally {
       setCreating(false);
     }
+
+    
   };
 
   const handleDelete = async (username) => {
     if (!window.confirm(`Supprimer "${username}" ?`)) return;
     try {
-      await deleteUser(username);
-      fetchUsers();
+      // await deleteUser(username);
+      // fetchUsers();
+
+      // suppression locale
+      setUsers(prev => prev.filter(u => u.username !== username));
+      setError('');
     } catch {
       setError('Erreur lors de la suppression.');
     }
@@ -347,63 +389,13 @@ function AdminUsers() {
 }
 
 // ─── vue : chatbot IA ─────────────────────────────────────────────────────────
-function ChatbotView() {
-  const [messages, setMessages] = useState([
-    { role:'ai', text:'Bonjour ! Je suis votre assistant pédagogique. Posez-moi vos questions sur les cours.' }
-  ]);
-  const [question, setQuestion] = useState('');
-  const [loading, setLoading]   = useState(false);
-
-  const send = async () => {
-    const q = question.trim();
-    if (!q || loading) return;
-    setMessages(m => [...m, { role:'user', text: q }]);
-    setQuestion('');
-    setLoading(true);
-    try {
-      const data = await askAI(q);
-      setMessages(m => [...m, { role:'ai', text: data.answer || data.response || 'Réponse reçue.' }]);
-    } catch {
-      setMessages(m => [...m, { role:'ai', text: 'Erreur de connexion avec l\'assistant. Réessayez.' }]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ ...s.card, padding:0, overflow:'hidden' }}>
-      <div style={s.chatHead}>
-        <div style={s.chatDot} />
-        <div>
-          <div style={{ fontSize:'14px', fontWeight:'600', color:'white' }}>Assistant EST Salé</div>
-          <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.65)' }}>Propulsé par Llama 3 via Ollama</div>
-        </div>
-      </div>
-      <div style={s.chatMsgs}>
-        {messages.map((m, i) => (
-          <div key={i} style={m.role === 'user' ? s.msgUser : s.msgAI}>{m.text}</div>
-        ))}
-        {loading && <div style={s.msgAI}>L'assistant réfléchit...</div>}
-      </div>
-      <div style={s.chatBar}>
-        <input style={s.chatInp} value={question}
-          onChange={e => setQuestion(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Posez votre question pédagogique..." />
-        <button style={s.chatSend} onClick={send}>
-          <Icon d={ICONS.send} size={14} />
-          Envoyer
-        </button>
-      </div>
-    </div>
-  );
-}
+<ChatbotView/>
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DASHBOARD PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function DashboardPage() {
-  const { role, logout } = useAuth();
+  const { role, username, logout } = useAuth();
   const navigate = useNavigate();
 
   // vue active par défaut selon le rôle
@@ -447,7 +439,7 @@ export default function DashboardPage() {
         </div>
       </nav> */}
 
-      <Navbar/>
+      <Navbar username={username}/>
 
       <div style={s.body}>
 

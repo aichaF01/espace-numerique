@@ -12,6 +12,8 @@ import ProtectedRoute from './features/auth/ProtectedRoute';
 import PublicRoute from './features/auth/PublicRoute';
 import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
+import ChatbotView from './features/chatbot/ChatbotView';
+import AdminUsers from './features/admin/AdminUsers';
 
 function App() {
   return (
@@ -27,7 +29,10 @@ function App() {
             }
           />
 
+          {/* test */}
           <Route path='/nav' element={<Navbar/>}/>
+          <Route path='/chatbot' element={<ChatbotView/>}/>
+          <Route path='/users' element={<AdminUsers/>}/>
           
           {/* protected routes */}
           <Route
