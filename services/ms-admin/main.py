@@ -38,11 +38,11 @@ keycloak_admin = KeycloakAdmin(
     server_url=KEYCLOAK_URL,
     username="admin",
     password="admin",
-    realm_name="master",
+    realm_name="espace-numerique",
+    user_realm_name="master",
     client_id="admin-cli",
+    verify=True
 )
-
-keycloak_admin.realm_name = REALM
 
 
 ############################################################ CASSANDRA ##################################################################
@@ -60,7 +60,8 @@ CREATE TABLE IF NOT EXISTS users (
     id text PRIMARY KEY,
     username text,
     email text,
-    password text
+    password text,
+    role text
 )
 """)
 
@@ -79,6 +80,7 @@ class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+    role: str
 
 
 class UserUpdate(BaseModel):
@@ -90,6 +92,7 @@ class UserResponse(BaseModel):
     id: str
     username: str
     email: str
+    role: str
 
 
 class CourseCreate(BaseModel):
@@ -119,7 +122,7 @@ def health():
 ########################################################################## USERRS ####################################################
 @app.post("/users", response_model=UserResponse)
 def create_user(user: UserCreate, admin=Depends(verify_admin)):
-
+    # 1. Création de l'utilisateur dans Keycloak
     user_id = keycloak_admin.create_user({
         "username": user.username,
         "email": user.email,
@@ -131,12 +134,22 @@ def create_user(user: UserCreate, admin=Depends(verify_admin)):
         }]
     })
 
+    try:
+        role_info = keycloak_admin.get_realm_role(user.role)
+        keycloak_admin.assign_realm_roles(
+            user_id=user_id, 
+            roles=[role_info]
+        )
+    except Exception as e:
+        keycloak_admin.delete_user(user_id)
+        raise HTTPException(status_code=400, detail=f"Role '{user.role}' inexistant dans Keycloak")
+
     session.execute(
-        "INSERT INTO users (id, username, email, password) VALUES (%s, %s, %s, %s)",
-        (str(user_id), user.username, user.email, user.password)
+        "INSERT INTO users (id, username, email, password, role) VALUES (%s, %s, %s, %s, %s)",
+        (str(user_id), user.username, user.email, user.password, user.role)
     )
 
-    return UserResponse(id=str(user_id), username=user.username, email=user.email)
+    return UserResponse(id=str(user_id), username=user.username, email=user.email, role=user.role)
 
 @app.get("/users", response_model=List[UserResponse])
 def get_users(admin=Depends(verify_admin)):
@@ -144,7 +157,7 @@ def get_users(admin=Depends(verify_admin)):
     rows = session.execute("SELECT * FROM users")
 
     return [
-        UserResponse(id=row.id, username=row.username, email=row.email)
+        UserResponse(id=row.id, username=row.username, email=row.email, role=row.role)
         for row in rows
     ]
 
