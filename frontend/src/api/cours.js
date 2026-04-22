@@ -9,3 +9,7 @@ export const uploadCours = (formData) =>
   axiosClient.post('/api/upload/cours', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then(r => r.data);
+
+// export const listCoursByProf = (username) =>
+// axiosClient.get(`/api/prof/${username}/cours`)
+//   .then(r => r.data);

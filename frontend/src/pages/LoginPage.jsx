@@ -30,7 +30,7 @@ export default function LoginPage() {
     try {
       const data = await login(username, password);
       saveToken(data.access_token);
-      navigate('/dash');
+      navigate('/');
     } catch {
       setError('Identifiants incorrects. Réessayez.');
     } finally {

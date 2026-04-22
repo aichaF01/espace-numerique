@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 export default function PublicRoute({ children }) {
   const { token } = useAuth();
  
-  if (token) return <Navigate to="/dash" replace />;
+  if (token) return <Navigate to="/dashboard" replace />;
  
   return children;
 }

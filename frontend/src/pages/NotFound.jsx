@@ -8,7 +8,7 @@ export default function NotFound() {
   const navigate     = useNavigate();
   const { token }    = useAuth();
 
-  const handleBack = () => navigate(token ? '/dash' : '/login');
+  const handleBack = () => navigate(token ? '/' : '/login');
 
   return (
     <div style={styles.page}>

@@ -9,7 +9,7 @@ export default function Unauthorized() {
   const navigate      = useNavigate();
   const { role, logout } = useAuth();
 
-  const handleBack = () => navigate('/dash');
+  const handleBack = () => navigate('/');
   const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
