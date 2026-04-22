@@ -6,10 +6,23 @@ from keycloak import KeycloakAdmin
 import httpx
 from fastapi.security import OAuth2PasswordBearer
 import uuid
+import urllib.parse
+from minio import Minio 
+from minio.error import S3Error
+
 app = FastAPI(title="MS Admin - User & Course Management")
+
 KEYCLOAK_URL = "http://keycloak:8080"
 REALM = "espace-numerique"
 AUTH_SERVICE = "http://ms-auth:8005"
+BUCKET = "courses"
+
+client = Minio(
+    "minio:9000",
+    access_key="admin",
+    secret_key="password123",
+    secure=False
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 def verify_admin(token: str = Depends(oauth2_scheme)):
@@ -71,7 +84,8 @@ CREATE TABLE IF NOT EXISTS courses (
     id text PRIMARY KEY,
     title text,
     description text,
-    instructor text
+    instructor text,
+    file_url text
 )
 """)
 
@@ -99,12 +113,14 @@ class CourseCreate(BaseModel):
     title: str
     description: str
     instructor: str
+    file_url: str
 
 
 class CourseUpdate(BaseModel):
     title: str
     description: str
     instructor: str
+    file_url: str
 
 
 class CourseResponse(BaseModel):
@@ -112,6 +128,7 @@ class CourseResponse(BaseModel):
     title: str
     description: str
     instructor: str
+    file_url: str
 
 
 @app.get("/health")
@@ -192,19 +209,19 @@ def delete_user(user_id: str, admin=Depends(verify_admin)):
 ######################################################################## COURSES #########################################################################
 @app.post("/courses", response_model=CourseResponse)
 def create_course(course: CourseCreate, admin=Depends(verify_admin)):
-
     course_id = str(uuid.uuid4())
 
     session.execute(
-        "INSERT INTO courses (id, title, description, instructor) VALUES (%s, %s, %s, %s)",
-        (course_id, course.title, course.description, course.instructor)
+        "INSERT INTO courses (id, title, description, instructor, file_url) VALUES (%s, %s, %s, %s, %s)",
+        (course_id, course.title, course.description, course.instructor, course.file_url)
     )
 
     return CourseResponse(
         id=course_id,
         title=course.title,
         description=course.description,
-        instructor=course.instructor
+        instructor=course.instructor,
+        file_url=course.file_url
     )
 
 @app.get("/courses", response_model=List[CourseResponse])
@@ -217,27 +234,46 @@ def get_courses(admin=Depends(verify_admin)):
             id=row.id,
             title=row.title,
             description=row.description,
-            instructor=row.instructor
+            instructor=row.instructor,
+            file_url=row.file_url
         )
         for row in rows
     ]
 
 @app.put("/courses/{course_id}")
 def update_course(course_id: str, course: CourseUpdate, admin=Depends(verify_admin)):
+    row = session.execute("SELECT file_url FROM courses WHERE id=%s", (course_id,)).one()
+    
+    if row and row.file_url:
+        try:
+            path = urllib.parse.urlparse(row.file_url).path
+            old_filename = path.split('/')[-1]
+            
+            new_path = urllib.parse.urlparse(course.file_url).path
+            new_filename = new_path.split('/')[-1]
+            
+            if old_filename != new_filename:
+                client.remove_object(BUCKET, old_filename)
+                print(f"Ancien fichier {old_filename} supprimé de MinIO.")
+        except Exception as e:
+            print(f"Erreur lors de la suppression MinIO: {e}")
 
     session.execute(
-        "UPDATE courses SET title=%s, description=%s, instructor=%s WHERE id=%s",
-        (course.title, course.description, course.instructor, course_id)
+        "UPDATE courses SET title=%s, description=%s, instructor=%s, file_url=%s WHERE id=%s",
+        (course.title, course.description, course.instructor, course.file_url, course_id)
     )
 
-    return {"message": "Course updated"}
+    return {"message": "Course updated and old storage cleaned"}
 
 @app.delete("/courses/{course_id}")
 def delete_course(course_id: str, admin=Depends(verify_admin)):
+    row = session.execute("SELECT file_url FROM courses WHERE id=%s", (course_id,)).one()
+    if row and row.file_url:
+        try:
+            filename = urllib.parse.urlparse(row.file_url).path.split('/')[-1]
+            client.remove_object(BUCKET, filename)
+        except:
+            pass
 
-    session.execute(
-        "DELETE FROM courses WHERE id=%s",
-        (course_id,)
-    )
-
-    return {"message": "Course deleted"}
+    session.execute("DELETE FROM courses WHERE id=%s", (course_id,))
+    return {"message": "Course and associated file deleted"}

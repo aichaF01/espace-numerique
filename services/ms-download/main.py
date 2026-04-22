@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from minio import Minio
 from minio.error import S3Error
+from datetime import timedelta
 
 app = FastAPI()
 
@@ -11,21 +12,27 @@ client = Minio(
     secure=False
 )
 
-BUCKET = "uploads"
+BUCKET = "courses"
 
-@app.get("/download/{filename}")
+@app.get("/{filename}")
 def download_file(filename: str):
     try:
-        url = client.presigned_get_object(
+        client.stat_object(BUCKET, filename)
+
+        url = client.get_presigned_url(
+            "GET",
             BUCKET,
             filename,
-            expires=3600  # link valid 1h
+            expires=timedelta(hours=1)
         )
 
         return {
             "filename": filename,
-            "url": url
+            "download_url": url
         }
 
-    except S3Error as e:
-        raise HTTPException(status_code=404, detail="File not found")
+    except S3Error:
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+    except Exception as e:
+        print(f"Erreur Download: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

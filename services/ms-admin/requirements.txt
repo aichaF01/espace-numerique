@@ -4,3 +4,4 @@ pydantic
 cassandra-driver 
 python-keycloak
 httpx
+minio
