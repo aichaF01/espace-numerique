@@ -39,7 +39,7 @@ export const s = {
   coursMeta:{ fontSize:'11px', color:'#aaa', marginTop:'2px' },
 
   // form
-  formGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' },
+  formGrid: { display:'grid', gridTemplateColumns:'1fr', gap:'14px' },
   formGrp:  { display:'flex', flexDirection:'column', gap:'5px' },
   formLbl:  { fontSize:'12px', fontWeight:'500', color:'#666' },
   formInp:  { padding:'9px 11px', borderRadius:'8px', border:'0.5px solid rgba(0,0,0,0.12)', backgroundColor:'#fafaf9', fontSize:'13px', color:'#1a1a1a', outline:'none', width:'100%', boxSizing:'border-box' },

@@ -15,7 +15,7 @@ const ROLE_CONFIG = {
   admin:    { label: 'Administrateur', bg: '#FAEEDA', color: '#633806' },
 };
 
-function Navbar() {
+function Navbar({username}) {
   const { role, logout } = useAuth();
   const navigate         = useNavigate();
   const [open, setOpen]  = useState(false);
@@ -59,7 +59,7 @@ function Navbar() {
         <button style={st.triggerBtn} onClick={() => setOpen(o => !o)}>
           <div style={st.avatar}>{initials}</div>
           <div style={{ textAlign: 'left', lineHeight: 1.3 }}>
-            <div style={st.triggerName}>{cfg.label}</div>
+            <div style={st.triggerName}>{username}</div>
           </div>
           <svg
             width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -84,7 +84,7 @@ function Navbar() {
                 {initials}
               </div>
               <div>
-                <div style={st.dropName}>{cfg.label}</div>
+                <div style={st.dropName}>{username}</div>
                 
                 <span style={{ ...st.rolePill, backgroundColor: cfg.bg, color: cfg.color }}>
                   {cfg.label}

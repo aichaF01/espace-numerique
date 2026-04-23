@@ -9,3 +9,11 @@ export const getRoleFromToken = (token) => {
     return null;
   }
 };
+
+export const getUsernameFromToken = (token) => {
+  try {
+    const decoded = jwtDecode(token);
+    // Keycloak met le username dans "preferred_username"
+    return decoded.preferred_username || decoded.sub || null;
+  } catch { return null; }
+};

@@ -10,10 +10,21 @@ import NotFound from './pages/NotFound';
 // ----------guards------------------------------
 import ProtectedRoute from './features/auth/ProtectedRoute';
 import PublicRoute from './features/auth/PublicRoute';
+import RoleRedirect from './features/auth/RoleRedirect';
+
+//----------------feautues & layout----------------------
 import Navbar from './components/layout/Navbar';
-import Sidebar from './components/layout/Sidebar';
+import ChatbotView from './features/chatbot/ChatbotView';
+import AdminUsers from './features/admin/AdminUsers';
+import AddUserForm from './features/admin/AddUserForm';
+import ProfCours from './features/cours/ProfCours'
+import ProfUpload from './features/cours/ProfUpload'
+import EtudiantCours from './features/cours/EtudiantCours'
+
+import { useAuth } from './context/AuthContext';
 
 function App() {
+  const {role} = useAuth();
   return (
     <div className="App">
       <Routes>
@@ -26,27 +37,54 @@ function App() {
               </PublicRoute>
             }
           />
+        {/* protected routes */}
 
-          <Route path='/nav' element={<Navbar/>}/>
-          
-          {/* protected routes */}
-          <Route
-            path='/dash'
-            element={
-            <ProtectedRoute allowedRoles={["admin","etudiant","prof"]}>
-              <DashboardPage />
-            </ProtectedRoute>
-            }
-          />
+        {/* ADMIN */}
+        <Route path="/admin/*" element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <DashboardPage />
+          </ProtectedRoute>
+        }>
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="users/create" element={<AddUserForm />} />
+        </Route>
 
-          {/* Unauthorized */}
-          <Route path='/unauthorized' element={<Unauthorized/>}/>
+        {/* PROF */}
+        <Route path="/prof/*" element={
+          <ProtectedRoute allowedRoles={["prof"]}>
+            <DashboardPage />
+          </ProtectedRoute>
+        }>
+          <Route path="upload" element={<ProfUpload />} />
+          <Route path="cours" element={<ProfCours />} />
+        </Route>
 
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
+        {/* ETUDIANT */}
+        <Route path="/etudiant/*" element={
+          <ProtectedRoute allowedRoles={["etudiant"]}>
+            <DashboardPage />
+          </ProtectedRoute>
+        }>
+          <Route path="cours" element={<EtudiantCours />} />
+        </Route>
 
-          {/* Racine → dashboard si connecté, login sinon */}
-          <Route path="/" element={<Navigate to="/dash" replace />} />
+        {/* COMMUN */}
+        <Route path="/:role/*" element={
+          <ProtectedRoute allowedRoles={["admin","etudiant","prof"]}>
+            <DashboardPage />
+          </ProtectedRoute>
+        }>
+          <Route path="chat" element={<ChatbotView />} />
+        </Route>
+
+        {/* Unauthorized */}
+        <Route path='/unauthorized' element={<Unauthorized/>}/>
+
+        {/* Racine → dashboard si connecté, login sinon */}
+        <Route path="/" element={<RoleRedirect />} />
+
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
   );

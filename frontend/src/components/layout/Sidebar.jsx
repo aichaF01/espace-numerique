@@ -1,25 +1,36 @@
 import Icon from '../ui/icon';
 import { useWindowSize } from '../ui/useWindowSize';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 //-----------styles----------------
 import { s } from '../../styles/dashboard';
 
 
-export default function Sidebar({ items, activeView, onSelect }) {
+export default function Sidebar({ items, role }) {
   const { isMobile } = useWindowSize();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <aside style={s.sidebar}>
-      {items.map((item) => (
-        <button
-          key={item.key}
-          onClick={() => onSelect(item.key)}
-          style={{ ...s.sideItem, ...(activeView === item.key ? s.sideActive : {}) }}
-        >
-          <Icon d={item.icon} size={15} />
-          {item.label}
-        </button>
-      ))}
+      {items.map((item) => {
+        // const isActive = location.pathname.includes(item.key);
+        const isActive = location.pathname.startsWith(`/${role}/${item.key}`);
+
+        return(
+          <button
+            key={item.key}
+            onClick={()=>navigate(`/${role}/${item.key}`)}
+            style={{
+                ...s.sideItem,
+                ...(isActive ? s.sideActive : {})
+              }}
+          >
+            <Icon d={item.icon} size={15} />
+            {item.label}
+          </button>
+        )
+      })}
     </aside>
   );
 }
