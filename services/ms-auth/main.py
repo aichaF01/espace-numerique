@@ -53,6 +53,11 @@ def verify_token(authorization: str, required_role: str = None) -> dict:
         "roles":    roles
     }
 
+
+@app.get("/verify")
+def verify(authorization: str = Header(None)):
+    user_info = verify_token(authorization)
+    return user_info
 # ════════════════════════════════════════════════════════
 # ROUTES
 # ════════════════════════════════════════════════════════

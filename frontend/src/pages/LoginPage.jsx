@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { login } from '../api/auth';
-
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { login } from "../api/auth";
+import { jwtDecode } from 'jwt-decode';
 // ---------------styles------------------
-import { styles } from '../styles/login';
+import { styles } from "../styles/login";
 
 //--------------------icons---------------
-import { ICONS } from '../components/ui/icons';
-import Icon from '../components/ui/icon';
+import { ICONS } from "../components/ui/icons";
+import Icon from "../components/ui/icon";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
 
   const { saveToken } = useAuth();
@@ -22,17 +22,35 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      setError('Veuillez remplir tous les champs.');
+      setError("Veuillez remplir tous les champs.");
       return;
     }
     setLoading(true);
-    setError('');
+    setError("");
+
     try {
       const data = await login(username, password);
-      saveToken(data.access_token);
-      navigate('/');
-    } catch {
-      setError('Identifiants incorrects. Réessayez.');
+      const token = data.access_token;
+
+      // 1. Sauvegarder le token
+      saveToken(token);
+
+      // 2. Extraire le rôle du token (structure Keycloak)
+      const decoded = jwtDecode(token);
+      const roles = decoded.realm_access?.roles || [];
+
+      // 3. Redirection intelligente selon le rôle
+      if (roles.includes("admin")) {
+        navigate("/admin/users");
+      } else if (roles.includes("prof")) {
+        navigate("/prof/upload");
+      } else if (roles.includes("etudiant")) {
+        navigate("/etudiant/cours");
+      } else {
+        navigate("/"); // Par défaut
+      }
+    } catch (err) {
+      setError("Identifiants incorrects. Réessayez.");
     } finally {
       setLoading(false);
     }
@@ -41,14 +59,20 @@ export default function LoginPage() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-
         {/* Logo */}
         <div style={styles.logo}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-               stroke="white" strokeWidth="2" strokeLinecap="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
           </svg>
         </div>
 
@@ -64,12 +88,12 @@ export default function LoginPage() {
             placeholder="ex: etudiant1"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
           />
         </div>
 
         {/* Champ password */}
-        <div style={{...styles.field, position: "relative"}}>
+        <div style={{ ...styles.field, position: "relative" }}>
           <label style={styles.label}>Mot de passe</label>
           <input
             style={styles.input}
@@ -77,17 +101,17 @@ export default function LoginPage() {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
           />
           {/* Eye Button */}
           {password && (
-          <button
-            onClick={() => setShow(!show)}
-            type="button"
-            style={styles.eyeIcon}
-          >
-            <Icon d={show ? ICONS.eyeOff : ICONS.eye} size={20}/>
-          </button>
+            <button
+              onClick={() => setShow(!show)}
+              type="button"
+              style={styles.eyeIcon}
+            >
+              <Icon d={show ? ICONS.eyeOff : ICONS.eye} size={20} />
+            </button>
           )}
         </div>
 
@@ -100,7 +124,7 @@ export default function LoginPage() {
           onClick={handleLogin}
           disabled={loading}
         >
-          {loading ? 'Connexion...' : 'Se connecter'}
+          {loading ? "Connexion..." : "Se connecter"}
         </button>
 
         <p style={styles.footer}>EST Salé · Plateforme pédagogique numérique</p>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { listCours, uploadCours } from '../api/cours';
+import { createCours, listCours } from '../api/cours';
 import { createUser, listUsers, deleteUser } from '../api/admin';
 import { askAI } from '../api/ai';
 
@@ -132,7 +132,7 @@ function ProfUpload() {
       fd.append('titre', titre);
       fd.append('description', desc);
       fd.append('fichier', fichier);
-      await uploadCours(fd);
+      await createCours(fd);
       setMsg('Cours publié avec succès !');
       setTitre(''); setDesc(''); setFichier(null);
     } catch {

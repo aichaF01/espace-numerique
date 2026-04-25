@@ -25,7 +25,15 @@ client = Minio(
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-def verify_admin(token: str = Depends(oauth2_scheme)):
+
+class UserSession:
+    def __init__(self, data: dict):
+        self.user_id = data.get("user_id")
+        self.username = data.get("username")
+        self.roles = data.get("roles", [])
+        
+# --- MODIFICATION DE LA DÉPENDANCE ---
+def get_current_user(token: str = Depends(oauth2_scheme)):
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
 
@@ -37,14 +45,31 @@ def verify_admin(token: str = Depends(oauth2_scheme)):
     if r.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = r.json()
+    # Ton MS Auth renvoie {"valid": True, "user_id": ..., "roles": [...]}
+    data = r.json()
+    
+    # On extrait les rôles
+    roles = data.get("roles", [])
+    data["roles"] = roles
+    return UserSession(data)
 
-    roles = user.get("roles") or user.get("realm_access", {}).get("roles", [])
+# --- FONCTION POUR LES ROUTES STRICTEMENT ADMIN (Users) ---
+def require_admin(user=Depends(get_current_user)):
+    if "admin" not in user.roles:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
 
-    if "admin" not in roles:
-        raise HTTPException(status_code=403, detail="Admin required")
+# --- FONCTION POUR LES ROUTES PROF OU ADMIN (Courses) ---
+def require_prof_or_admin(user=Depends(get_current_user)):
+    if "prof" not in user.roles and "admin" not in user.roles:
+        raise HTTPException(status_code=403, detail="Prof or Admin role required")
+    return user
 
-    user["roles"] = roles
+def require_any_role(user=Depends(get_current_user)):
+    # On autorise si l'utilisateur a au moins un des rôles valides du système
+    allowed = ["admin", "prof", "etudiant"]
+    if not any(role in allowed for role in user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: valid role required")
     return user
 
 keycloak_admin = KeycloakAdmin(
@@ -112,14 +137,12 @@ class UserResponse(BaseModel):
 class CourseCreate(BaseModel):
     title: str
     description: str
-    instructor: str
     file_url: str
 
 
 class CourseUpdate(BaseModel):
     title: str
     description: str
-    instructor: str
     file_url: str
 
 
@@ -138,38 +161,42 @@ def health():
 
 ########################################################################## USERRS ####################################################
 @app.post("/users", response_model=UserResponse)
-def create_user(user: UserCreate, admin=Depends(verify_admin)):
-    # 1. Création de l'utilisateur dans Keycloak
-    user_id = keycloak_admin.create_user({
+def create_user(user: UserCreate, admin=Depends(require_admin)):
+    user_payload = {
         "username": user.username,
         "email": user.email,
         "enabled": True,
-        "credentials": [{
-            "type": "password",
-            "value": user.password,
-            "temporary": False
-        }]
-    })
+        "emailVerified": True,
+        "firstName": user.username.capitalize(),
+        "lastName": "EST-Sale",
+        "requiredActions": []
+    }
 
     try:
-        role_info = keycloak_admin.get_realm_role(user.role)
-        keycloak_admin.assign_realm_roles(
+        user_id = keycloak_admin.create_user(user_payload)
+        
+        keycloak_admin.set_user_password(
             user_id=user_id, 
-            roles=[role_info]
+            password=user.password, 
+            temporary=False
         )
+
+        role_info = keycloak_admin.get_realm_role(user.role)
+        keycloak_admin.assign_realm_roles(user_id=user_id, roles=[role_info])
+
+        session.execute(
+            "INSERT INTO users (id, username, email, password, role) VALUES (%s, %s, %s, %s, %s)",
+            (str(user_id), user.username, user.email, user.password, user.role)
+        )
+
+        return UserResponse(id=str(user_id), username=user.username, email=user.email, role=user.role)
+
     except Exception as e:
-        keycloak_admin.delete_user(user_id)
-        raise HTTPException(status_code=400, detail=f"Role '{user.role}' inexistant dans Keycloak")
-
-    session.execute(
-        "INSERT INTO users (id, username, email, password, role) VALUES (%s, %s, %s, %s, %s)",
-        (str(user_id), user.username, user.email, user.password, user.role)
-    )
-
-    return UserResponse(id=str(user_id), username=user.username, email=user.email, role=user.role)
+        print(f"Erreur lors de la création : {e}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/users", response_model=List[UserResponse])
-def get_users(admin=Depends(verify_admin)):
+def get_users(admin=Depends(require_admin)):
 
     rows = session.execute("SELECT * FROM users")
 
@@ -179,7 +206,7 @@ def get_users(admin=Depends(verify_admin)):
     ]
 
 @app.put("/users/{user_id}")
-def update_user(user_id: str, user: UserUpdate, admin=Depends(verify_admin)):
+def update_user(user_id: str, user: UserUpdate, admin=Depends(require_admin)):
 
     keycloak_admin.update_user(user_id, {
         "username": user.username,
@@ -194,7 +221,7 @@ def update_user(user_id: str, user: UserUpdate, admin=Depends(verify_admin)):
     return {"message": "User updated"}
 
 @app.delete("/users/{user_id}")
-def delete_user(user_id: str, admin=Depends(verify_admin)):
+def delete_user(user_id: str, admin=Depends(require_admin)):
 
     keycloak_admin.delete_user(user_id)
 
@@ -208,24 +235,24 @@ def delete_user(user_id: str, admin=Depends(verify_admin)):
 
 ######################################################################## COURSES #########################################################################
 @app.post("/courses", response_model=CourseResponse)
-def create_course(course: CourseCreate, admin=Depends(verify_admin)):
+def create_course(course: CourseCreate, user=Depends(require_prof_or_admin)):
     course_id = str(uuid.uuid4())
-
+    instructor_name = user.username
     session.execute(
         "INSERT INTO courses (id, title, description, instructor, file_url) VALUES (%s, %s, %s, %s, %s)",
-        (course_id, course.title, course.description, course.instructor, course.file_url)
+        (course_id, course.title, course.description, instructor_name, course.file_url)
     )
 
     return CourseResponse(
         id=course_id,
         title=course.title,
         description=course.description,
-        instructor=course.instructor,
+        instructor=instructor_name,
         file_url=course.file_url
     )
 
 @app.get("/courses", response_model=List[CourseResponse])
-def get_courses(admin=Depends(verify_admin)):
+def get_courses(user=Depends(require_any_role)):
 
     rows = session.execute("SELECT * FROM courses")
 
@@ -241,7 +268,8 @@ def get_courses(admin=Depends(verify_admin)):
     ]
 
 @app.put("/courses/{course_id}")
-def update_course(course_id: str, course: CourseUpdate, admin=Depends(verify_admin)):
+def update_course(course_id: str, course: CourseUpdate, user=Depends(require_prof_or_admin)):
+    instructor_name = user.username
     row = session.execute("SELECT file_url FROM courses WHERE id=%s", (course_id,)).one()
     
     if row and row.file_url:
@@ -257,16 +285,15 @@ def update_course(course_id: str, course: CourseUpdate, admin=Depends(verify_adm
                 print(f"Ancien fichier {old_filename} supprimé de MinIO.")
         except Exception as e:
             print(f"Erreur lors de la suppression MinIO: {e}")
-
     session.execute(
         "UPDATE courses SET title=%s, description=%s, instructor=%s, file_url=%s WHERE id=%s",
-        (course.title, course.description, course.instructor, course.file_url, course_id)
+        (course.title, course.description, instructor_name, course.file_url, course_id)
     )
 
     return {"message": "Course updated and old storage cleaned"}
 
 @app.delete("/courses/{course_id}")
-def delete_course(course_id: str, admin=Depends(verify_admin)):
+def delete_course(course_id: str, admin=Depends(require_prof_or_admin)):
     row = session.execute("SELECT file_url FROM courses WHERE id=%s", (course_id,)).one()
     if row and row.file_url:
         try:
